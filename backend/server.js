@@ -68,3 +68,11 @@ app.listen(process.env.PORT,() =>{
     console.log(`Server is running on port ${process.env.PORT}`);
 })
 
+// 
+// {
+//     "name":"Admin",
+//     "email":"admin@gmail.com",
+//     "phone":"1234567890",
+//     "password":"123456",
+//     "role":"admin"
+// }
