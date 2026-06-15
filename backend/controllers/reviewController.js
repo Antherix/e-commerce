@@ -1,6 +1,6 @@
 const REVIEWMODEL = require('../models/reviewModel');
 
-const REVIEWMODEL = require('../models/reviewModel');
+
 const PRODUCTMODEL = require('../models/productModel');
 
 exports.createReview = async (req, res) => {
