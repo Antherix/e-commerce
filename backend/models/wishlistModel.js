@@ -20,3 +20,4 @@ const wishlistSchema = new mongoose.Schema(
 });
 
 const WISHLISTMODEL = mongoose.model('Wishlist',wishlistSchema);
+module.exports = WISHLISTMODEL;

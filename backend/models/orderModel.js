@@ -65,3 +65,4 @@ const orderSchema = new mongoose.Schema(
 });
 
 const ORDERMODEL= mongoose.model('Order',orderSchema);
+module.exports = ORDERMODEL;

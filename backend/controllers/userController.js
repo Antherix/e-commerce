@@ -110,16 +110,44 @@ exports.getUserById = async (req, res) => {
     }
 };
 
-// Update a user by ID
 exports.updateUserById = async (req, res) => {
     try {
-        const updatedUser = await USERMODEL.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const { password, role, ...safeFields } = req.body;
+
+        const updatedUser = await USERMODEL.findByIdAndUpdate(
+            req.params.id,
+            safeFields,
+            { new: true }
+        ).select('-password');
+
         if (!updatedUser) {
             return res.status(404).json({ message: 'User not found' });
         }
-        res.status(200).json({ message: 'User updated successfully', user: updatedUser });
+
+        res.status(200).json({ message: 'User updated', user: updatedUser });
     } catch (error) {
         res.status(500).json({ message: 'Error updating user', error: error.message });
+    }
+};
+
+// Separate route for password change
+exports.changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        
+        const user = await USERMODEL.findById(req.user.id);
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Current password is incorrect' });
+        }
+        
+        user.password = await bcrypt.hash(newPassword, 10);
+        await user.save();
+        
+        res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -164,23 +192,32 @@ exports.deactivateUserById = async (req, res) => {
 
 
 exports.getUserProfile = async (req, res) => {
+    try {
+        const user = await USERMODEL.findById(req.user.id).select('-password');
 
-    const user = await USERMODEL
-        .findById(req.user.id)
-        .select('-password');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
-    res.json(user);
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 };
 
 exports.updateUserProfile = async (req, res) => {
+    try {
+        const { password, role, ...safeFields } = req.body;
 
     const user = await USERMODEL.findByIdAndUpdate(
         req.user.id,
-        req.body,
+        safeFields,
         { new: true }
     ).select('-password');
 
     res.json(user);
+}catch (error) {    res.status(500).json({ message: error.message });
+}
 };
 
 

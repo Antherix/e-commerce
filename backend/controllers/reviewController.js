@@ -1,12 +1,30 @@
 const REVIEWMODEL = require('../models/reviewModel');
 
-// Create a new review
+const REVIEWMODEL = require('../models/reviewModel');
+const PRODUCTMODEL = require('../models/productModel');
+
 exports.createReview = async (req, res) => {
     try {
         const { user, product, rating, comment } = req.body;
-        const newReview = new REVIEWMODEL({ user, product, rating, comment });
 
+        // Check if user already reviewed this product
+        const existing = await REVIEWMODEL.findOne({ user, product });
+        if (existing) {
+            return res.status(400).json({ message: 'You already reviewed this product' });
+        }
+
+        const newReview = new REVIEWMODEL({ user, product, rating, comment });
         await newReview.save();
+
+        // ✅ Recalculate and update product's average rating
+        const allReviews = await REVIEWMODEL.find({ product, status: 'active' });
+        const totalReviews = allReviews.length;
+        const averageRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews;
+
+        await PRODUCTMODEL.findByIdAndUpdate(product, {
+            averageRating: Math.round(averageRating * 10) / 10,  // round to 1 decimal
+            totalReviews
+        });
 
         res.status(201).json({ message: 'Review created successfully', review: newReview });
     } catch (error) {

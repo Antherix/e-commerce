@@ -16,7 +16,7 @@ exports.addToCart = async (req, res) => {
         }
 
         // Find or create cart for the user
-        let cart = await CARTMODEL.findOne({ user: userId });
+        let cart = await CARTMODEL.findOne({ user: userId }).populate('items.product');
 
         if (!cart) {
             cart = new CARTMODEL({ user: userId, items: [], totalPrice: 0 });
@@ -31,12 +31,13 @@ exports.addToCart = async (req, res) => {
         } else {
             // Add new item to cart
             cart.items.push({ product: productId, quantity });
+            // Re-populate after push so new item has price data
+            await cart.populate('items.product');
         }
 
         // Recalculate total price
         cart.totalPrice = cart.items.reduce((total, item) => {
-            const itemTotal = item.quantity * product.price; // Assuming product has a price field
-            return total + itemTotal;
+            return total + (item.quantity * item.product.price);
         }, 0);
 
         await cart.save();
@@ -80,8 +81,7 @@ exports.removeFromCart = async (req, res) => {
 
         // Recalculate total price
         cart.totalPrice = cart.items.reduce((total, item) => {
-            const itemTotal = item.quantity * product.price; // Assuming product has a price field
-            return total + itemTotal;
+            return total + (item.quantity * item.product.price);
         }, 0);
 
         await cart.save();
