@@ -4,7 +4,8 @@ const cartController = require('../controllers/cartController');
 const auth = require('../middleware/authMiddleware');
 
 router.post('/add', auth, cartController.addToCart);
-router.get('/:userId', auth, cartController.getCartByUserId);
+router.get('/', auth, cartController.getMyCart);
 router.delete('/remove', auth, cartController.removeFromCart);
+router.delete('/clear', auth, cartController.clearCart);
 
 module.exports = router;

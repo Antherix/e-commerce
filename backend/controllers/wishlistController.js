@@ -1,64 +1,76 @@
 const WISHLISTMODEL = require('../models/wishlistModel');
 
-// Create a new wishlist
-exports.createWishlist = async (req, res) => {
+// Add product to wishlist (create if doesn't exist)
+exports.addToWishlist = async (req, res) => {
     try {
-        const { user, products } = req.body;
-        const newWishlist = new WISHLISTMODEL({ user, products });
+        const userId = req.user.id;
+        const { productId } = req.body;
 
-        await newWishlist.save();
+        if (!productId) {
+            return res.status(400).json({ message: 'productId is required' });
+        }
 
-        res.status(201).json({ message: 'Wishlist created successfully', wishlist: newWishlist });
+        let wishlist = await WISHLISTMODEL.findOne({ user: userId });
+
+        if (!wishlist) {
+            wishlist = new WISHLISTMODEL({ user: userId, products: [] });
+        }
+
+        // Avoid duplicates
+        const alreadyAdded = wishlist.products.some(p => p.toString() === productId);
+        if (alreadyAdded) {
+            return res.status(400).json({ message: 'Product already in wishlist' });
+        }
+
+        wishlist.products.push(productId);
+        await wishlist.save();
+
+        await wishlist.populate('products', 'title price images');
+
+        res.status(200).json({ message: 'Product added to wishlist', wishlist });
     } catch (error) {
-        res.status(500).json({ message: 'Error creating wishlist', error: error.message });
+        res.status(500).json({ message: 'Error updating wishlist', error: error.message });
     }
 };
 
-// Get all wishlists
-exports.getAllWishlists = async (req, res) => {
+// Remove product from wishlist
+exports.removeFromWishlist = async (req, res) => {
     try {
-        const wishlists = await WISHLISTMODEL.find().populate('user').populate('products');
-        res.status(200).json(wishlists);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching wishlists', error: error.message });
-    }
-};
+        const userId = req.user.id;
+        const { productId } = req.body;
 
-// Get a wishlist by ID
-exports.getWishlistById = async (req, res) => {
-    try {
-        const wishlist = await WISHLISTMODEL.findById(req.params.id).populate('user').populate('products');
+        const wishlist = await WISHLISTMODEL.findOne({ user: userId });
+
         if (!wishlist) {
             return res.status(404).json({ message: 'Wishlist not found' });
         }
-        res.status(200).json(wishlist);
+
+        wishlist.products = wishlist.products.filter(p => p.toString() !== productId);
+        await wishlist.save();
+
+        await wishlist.populate('products', 'title price images');
+
+        res.status(200).json({ message: 'Product removed from wishlist', wishlist });
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching wishlist', error: error.message });
+        res.status(500).json({ message: 'Error removing from wishlist', error: error.message });
     }
 };
 
-// Update a wishlist by ID
-exports.updateWishlistById = async (req, res) => {
+// Get logged-in user's wishlist
+exports.getMyWishlist = async (req, res) => {
     try {
-        const updatedWishlist = await WISHLISTMODEL.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('user').populate('products');
-        if (!updatedWishlist) {
-            return res.status(404).json({ message: 'Wishlist not found' });
-        }
-        res.status(200).json({ message: 'Wishlist updated successfully', wishlist: updatedWishlist });
-    } catch (error) {
-        res.status(500).json({ message: 'Error updating wishlist', error: error.message });
-    }   
-};
+        const userId = req.user.id;
 
-// Delete a wishlist by ID
-exports.deleteWishlistById = async (req, res) => {
-    try {
-        const deletedWishlist = await WISHLISTMODEL.findByIdAndDelete(req.params.id);
-        if (!deletedWishlist) {
-            return res.status(404).json({ message: 'Wishlist not found' });
+        const wishlist = await WISHLISTMODEL
+            .findOne({ user: userId })
+            .populate('products', 'title price images averageRating');
+
+        if (!wishlist) {
+            return res.status(200).json({ products: [] });
         }
-        res.status(200).json({ message: 'Wishlist deleted successfully' });
+
+        res.status(200).json(wishlist);
     } catch (error) {
-        res.status(500).json({ message: 'Error deleting wishlist', error: error.message });
+        res.status(500).json({ message: 'Error fetching wishlist', error: error.message });
     }
 };
